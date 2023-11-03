@@ -1,4 +1,4 @@
-name: sqflite_database_example
+name: sqlite_notes
 description: A new Flutter project.
 publish_to: "none"
 version: 1.0.0+1

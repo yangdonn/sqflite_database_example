@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:sqlite_notes/widget/note_form_widget.dart';
 import '../db/notes_database.dart';
 import '../model/note.dart';
-import '../widget/note_form_widget.dart';
 
 class AddEditNotePage extends StatefulWidget {
   final Note? note;
@@ -25,7 +26,6 @@ class _AddEditNotePageState extends State<AddEditNotePage> {
   @override
   void initState() {
     super.initState();
-
     isImportant = widget.note?.isImportant ?? false;
     number = widget.note?.number ?? 0;
     title = widget.note?.title ?? '';
@@ -35,7 +35,7 @@ class _AddEditNotePageState extends State<AddEditNotePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          actions: [buildButton()],
+          actions: [buildDeleteButton(), buildSaveButton()],
         ),
         body: Form(
           key: _formKey,
@@ -54,20 +54,31 @@ class _AddEditNotePageState extends State<AddEditNotePage> {
         ),
       );
 
-  Widget buildButton() {
-    final isFormValid = title.isNotEmpty && description.isNotEmpty;
+  Widget buildDeleteButton() {
+    final isUpdating = widget.note != null;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white,
-          backgroundColor: isFormValid ? null : Colors.grey.shade700,
-        ),
-        onPressed: addOrUpdateNote,
-        child: const Text('Save'),
-      ),
+    if (isUpdating) {
+      return IconButton(
+        icon: Icon(Icons.delete),
+        onPressed: deleteNote,
+      );
+    } else {
+      return SizedBox.shrink(); // Hide the delete icon when creating a new note.
+    }
+  }
+
+  Widget buildSaveButton() {
+    return IconButton(
+      icon: Icon(Icons.save),
+      onPressed: addOrUpdateNote,
     );
+  }
+
+  void deleteNote() async {
+    if (widget.note != null) {
+      await NotesDatabase.instance.delete(widget.note!.id!);
+      Navigator.of(context).pop();
+    }
   }
 
   void addOrUpdateNote() async {
@@ -75,17 +86,14 @@ class _AddEditNotePageState extends State<AddEditNotePage> {
 
     if (isValid) {
       final isUpdating = widget.note != null;
-
       if (isUpdating) {
         await updateNote();
       } else {
         await addNote();
       }
-
       Navigator.of(context).pop();
     }
   }
-
   Future updateNote() async {
     final note = widget.note!.copy(
       isImportant: isImportant,
@@ -93,19 +101,16 @@ class _AddEditNotePageState extends State<AddEditNotePage> {
       title: title,
       description: description,
     );
-
     await NotesDatabase.instance.update(note);
   }
-
   Future addNote() async {
     final note = Note(
       title: title,
-      isImportant: true,
+      isImportant: isImportant,
       number: number,
       description: description,
       createdTime: DateTime.now(),
     );
-
     await NotesDatabase.instance.create(note);
   }
 }
